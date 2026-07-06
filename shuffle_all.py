@@ -1,7 +1,6 @@
 import docx
 import re
 import random
-import csv
 import logging
 import sys
 import copy
@@ -14,6 +13,11 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.opc.constants import CONTENT_TYPE as CT
 from docx.shared import Pt
+
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 
 if getattr(sys, "frozen", False):
     SCRIPT_DIR = Path(sys.executable).resolve().parent
@@ -35,7 +39,10 @@ def setup_logger():
     logger.setLevel(logging.INFO)
     fmt = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s", "%H:%M:%S")
 
+    # Full detail always goes to the log file. The console only needs to
+    # interrupt the clean status UI (see ui_* below) for warnings/errors.
     console = logging.StreamHandler(sys.stdout)
+    console.setLevel(logging.WARNING)
     console.setFormatter(fmt)
     logger.addHandler(console)
 
@@ -46,6 +53,75 @@ def setup_logger():
 
 
 log = setup_logger()
+
+
+def _enable_windows_ansi():
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-11)
+        mode = ctypes.c_uint32()
+        if not kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            return False
+        return bool(kernel32.SetConsoleMode(handle, mode.value | 0x0004))
+    except Exception:
+        return False
+
+
+COLOR = sys.stdout.isatty() and (platform.system() != "Windows" or _enable_windows_ansi())
+
+_CODES = {"green": "32", "red": "31", "cyan": "36", "yellow": "33", "bold": "1", "dim": "2"}
+
+
+def style(text, *names):
+    if not COLOR:
+        return text
+    codes = ";".join(_CODES[n] for n in names)
+    return f"\033[{codes}m{text}\033[0m"
+
+
+def ui_banner():
+    width = 56
+    print(style("=" * width, "cyan"))
+    print(style("DOCX Answer Scrambler".center(width), "cyan", "bold"))
+    print(style("=" * width, "cyan"))
+    print()
+
+
+def ui_file_start(idx, total, name):
+    print(style(f"[{idx}/{total}]", "cyan", "bold") + f" {name}")
+
+
+def ui_progress(n):
+    sys.stdout.write(f"\r    shuffling... {n} question(s)")
+    sys.stdout.flush()
+
+
+def _ui_clear_line():
+    sys.stdout.write("\r" + " " * 60 + "\r")
+
+
+def ui_file_done(q_count, out_name):
+    _ui_clear_line()
+    print(style("    +", "green", "bold") + f" {q_count} question(s) shuffled -> {out_name}")
+
+
+def ui_file_failed(err):
+    _ui_clear_line()
+    print(style("    x", "red", "bold") + f" failed: {err}")
+
+
+def ui_summary(success, fail, out_dir, log_file):
+    print()
+    print(style("-" * 56, "dim"))
+    line = f"  {success} succeeded"
+    if fail:
+        print(style(line + f", {fail} failed", "red", "bold"))
+    else:
+        print(style(line, "green", "bold"))
+    print(f"  Output: {out_dir}")
+    print(f"  Log:    {log_file}")
+    print(style("-" * 56, "dim"))
 
 
 def get_para_text(p):
@@ -280,7 +356,7 @@ def add_answer_key_page(doc, answer_key):
             for p in cell.paragraphs:
                 set_rtl(p)
 
-def process_document(input_path: Path, output_path: Path, key_path: Path, seed=None):
+def process_document(input_path: Path, output_path: Path, seed=None, progress_cb=None):
     rng = random.Random(seed)
     doc = docx.Document(str(input_path))
 
@@ -344,6 +420,8 @@ def process_document(input_path: Path, output_path: Path, key_path: Path, seed=N
 
         questions_found += 1
         log.info(f"  Question {current_question_num}: {len(block_paras)} answers shuffled")
+        if progress_cb:
+            progress_cb(questions_found)
         current_question_num = None
 
     if current_question_num:
@@ -352,11 +430,6 @@ def process_document(input_path: Path, output_path: Path, key_path: Path, seed=N
     add_answer_key_page(doc, answer_key)
 
     doc.save(str(output_path))
-
-    with open(key_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=["question", "correct_letter"])
-        writer.writeheader()
-        writer.writerows(answer_key)
 
     return questions_found
 
@@ -413,6 +486,7 @@ def check_dependencies():
 
 
 def main():
+    ui_banner()
     log.info("=" * 60)
     log.info("Starting Word file processing in folder")
     log.info(f"Working directory: {SCRIPT_DIR}")
@@ -426,6 +500,7 @@ def main():
     ]
 
     if not docx_files:
+        print(style("No .docx files found in this folder!", "yellow", "bold"))
         log.warning("No .docx files found in this folder!")
         return
 
@@ -436,21 +511,24 @@ def main():
     fail_count = 0
 
     for idx, file_path in enumerate(docx_files, start=1):
+        ui_file_start(idx, len(docx_files), file_path.name)
         log.info(f"[{idx}/{len(docx_files)}] Processing: {file_path.name}")
         try:
-            key_path = OUTPUT_DIR / f"{file_path.stem}_answer_key.csv"
-
             with tempfile.TemporaryDirectory() as tmp_dir:
                 tmp_docx_path = Path(tmp_dir) / f"{file_path.stem}_shuffled.docx"
-                q_count = process_document(file_path, tmp_docx_path, key_path, seed=None)
+                q_count = process_document(file_path, tmp_docx_path, seed=None,
+                                            progress_cb=ui_progress)
                 pdf_path = convert_to_pdf(tmp_docx_path, OUTPUT_DIR)
 
+            ui_file_done(q_count, pdf_path.name)
             log.info(f"  Success: {q_count} question(s) shuffled -> {pdf_path.name}")
             success_count += 1
         except Exception as e:
+            ui_file_failed(e)
             log.error(f"  Error processing {file_path.name}: {e}")
             fail_count += 1
 
+    ui_summary(success_count, fail_count, OUTPUT_DIR, LOG_FILE)
     log.info("=" * 60)
     log.info(f"Summary: {success_count} succeeded, {fail_count} failed")
     log.info(f"Output files saved in: {OUTPUT_DIR}")
