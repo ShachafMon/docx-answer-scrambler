@@ -1,0 +1,10 @@
+venv/
+build_venv/
+build/
+dist/
+*.spec
+shuffled_output/
+shuffle_log.txt
+*.docx
+*.doc
+*.pdf

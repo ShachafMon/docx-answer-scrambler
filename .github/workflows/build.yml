@@ -1,0 +1,35 @@
+name: Build executables
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install python-docx Pillow pyinstaller
+      - run: pyinstaller --onefile --name shuffle_exam --clean shuffle_final.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shuffle_exam-windows
+          path: dist/shuffle_exam.exe
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install python-docx Pillow pyinstaller
+      - run: pyinstaller --onefile --name shuffle_exam_mac --clean shuffle_final.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shuffle_exam-mac
+          path: dist/shuffle_exam_mac
