@@ -65,5 +65,7 @@ build_windows.bat     # Windows
 
 The executable is written to `dist/`.
 
-Releases are also built automatically by GitHub Actions for all three
-platforms whenever a version tag (`v*`) is pushed.
+Releases are also built automatically by GitHub Actions: draft and publish a
+new release on the [Releases page](https://github.com/ShachafMon/docx-answer-scrambler/releases/new),
+which triggers a build for all three platforms and attaches the resulting
+executables to that release once it finishes.
