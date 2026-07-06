@@ -1,4 +1,4 @@
-name: Build Windows EXE
+name: Build EXE
 
 on:
   push:
@@ -8,7 +8,19 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: docx-answer-scrambler.exe
+            asset_name: docx-answer-scrambler-windows
+          - os: macos-latest
+            artifact_name: docx-answer-scrambler
+            asset_name: docx-answer-scrambler-mac
+          - os: ubuntu-latest
+            artifact_name: docx-answer-scrambler
+            asset_name: docx-answer-scrambler-linux
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,13 +43,13 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: docx-answer-scrambler-windows
-          path: dist/docx-answer-scrambler.exe
+          name: ${{ matrix.asset_name }}
+          path: dist/${{ matrix.artifact_name }}
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/docx-answer-scrambler.exe
+          files: dist/${{ matrix.artifact_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
