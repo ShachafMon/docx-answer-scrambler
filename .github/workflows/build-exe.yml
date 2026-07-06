@@ -12,13 +12,13 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact_name: docx-answer-scrambler.exe
-            asset_name: docx-answer-scrambler-windows
+            build_name: docx-answer-scrambler
+            asset_name: docx-answer-scrambler.exe
           - os: macos-latest
-            artifact_name: docx-answer-scrambler
+            build_name: docx-answer-scrambler-mac
             asset_name: docx-answer-scrambler-mac
           - os: ubuntu-latest
-            artifact_name: docx-answer-scrambler
+            build_name: docx-answer-scrambler-linux
             asset_name: docx-answer-scrambler-linux
     runs-on: ${{ matrix.os }}
     steps:
@@ -38,18 +38,18 @@ jobs:
 
       - name: Build EXE
         run: |
-          pyinstaller --onefile --name docx-answer-scrambler shuffle_all.py
+          pyinstaller --onefile --name "${{ matrix.build_name }}" shuffle_all.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset_name }}
-          path: dist/${{ matrix.artifact_name }}
+          path: dist/${{ matrix.asset_name }}
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/${{ matrix.artifact_name }}
+          files: dist/${{ matrix.asset_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
