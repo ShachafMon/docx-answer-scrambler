@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(convert \"/tmp/claude-1000/-home-shachaf-Documents----------------------------------/4384ba19-0f5d-47c4-bb7f-d1cab9f0b132/scratchpad/image1.png\" -trim +repage \"/tmp/claude-1000/-home-shachaf-Documents----------------------------------/4384ba19-0f5d-47c4-bb7f-d1cab9f0b132/scratchpad/image1_trim.png\")",
+      "Bash(identify \"/tmp/claude-1000/-home-shachaf-Documents----------------------------------/4384ba19-0f5d-47c4-bb7f-d1cab9f0b132/scratchpad/image1_trim.png\")",
+      "Bash(convert \"/tmp/claude-1000/-home-shachaf-Documents----------------------------------/4384ba19-0f5d-47c4-bb7f-d1cab9f0b132/scratchpad/image1_trim.png\" -filter point -resize 800% \"/tmp/claude-1000/-home-shachaf-Documents----------------------------------/4384ba19-0f5d-47c4-bb7f-d1cab9f0b132/scratchpad/image1_big.png\")",
+      "Bash(timeout 5 curl -sI https://www.google.com)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(unzip -l \"תשפד - מועד ב.docx\")",
+      "Bash(mkdir -p /tmp/claude-1000/-home-shachaf-Documents----------------------------------/4384ba19-0f5d-47c4-bb7f-d1cab9f0b132/scratchpad/emb)",
+      "Bash(unzip -o \"תשפד - מועד ב.docx\" \"word/embeddings/*\" -d /tmp/claude-1000/-home-shachaf-Documents----------------------------------/4384ba19-0f5d-47c4-bb7f-d1cab9f0b132/scratchpad/emb)",
+      "Bash(file /tmp/claude-1000/-home-shachaf-Documents----------------------------------/4384ba19-0f5d-47c4-bb7f-d1cab9f0b132/scratchpad/emb/word/embeddings/*)",
+      "Bash(python3 -c ' *)",
+      "Bash(find /usr/lib/libreoffice/share/registry /etc/libreoffice -iname \"*.xcd\" 2>/dev/null | head; *)",
+      "Read(//etc/libreoffice/registry/**)",
+      "Bash(python3)",
+      "Bash(venv/bin/python3 shuffle_all.py)",
+      "Bash(rm -f /tmp/claude-1000/-home-shachaf-Documents----------------------------------/4384ba19-0f5d-47c4-bb7f-d1cab9f0b132/scratchpad/fixed2*)",
+      "Bash(pdftoppm -png -r 100 -f 2 -l 2 \"shuffled_output/תשפד - מועד ב_shuffled.pdf\" /tmp/claude-1000/-home-shachaf-Documents----------------------------------/4384ba19-0f5d-47c4-bb7f-d1cab9f0b132/scratchpad/fixed2)"
+    ]
+  }
+}
