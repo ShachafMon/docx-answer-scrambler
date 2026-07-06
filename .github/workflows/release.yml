@@ -5,23 +5,29 @@ on:
     types: [published] # Triggers immediately when you click "Publish release"
 
 jobs:
+  build:
+    uses: ./.github/workflows/build-exe.yml
+
   upload-assets:
+    needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
 
-      # 1. Run your build process here to generate the binaries
-      # (e.g., go build, npm run build, pyinstaller, etc.)
-      - name: Build Binaries
-        run: |
-          echo "Run your specific build commands here to output the files"
-
-      # 2. Automatically inject the files into the release you just opened
+      # actions/download-artifact drops each artifact into its own
+      # subfolder named after the artifact, e.g. dist/docx-answer-scrambler.exe/docx-answer-scrambler.exe
       - name: Upload Artifacts to the Created Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.release.tag_name }}
           files: |
-            docx-answer-scrambler-linux
-            docx-answer-scrambler-mac
-            docx-answer-scrambler.exe
+            dist/docx-answer-scrambler.exe/docx-answer-scrambler.exe
+            dist/docx-answer-scrambler-mac/docx-answer-scrambler-mac
+            dist/docx-answer-scrambler-linux/docx-answer-scrambler-linux
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
