@@ -24,7 +24,6 @@ if getattr(sys, "frozen", False):
 else:
     SCRIPT_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = SCRIPT_DIR / "shuffled_output"
-LOG_FILE = SCRIPT_DIR / "shuffle_log.txt"
 
 LETTERS = ["א", "ב", "ג", "ד", "ה","ו","ז"]
 LETTER_PATTERN = re.compile(r'^\s*[\[]?\s*([א-ז])[\.\)]\)?')
@@ -39,16 +38,12 @@ def setup_logger():
     logger.setLevel(logging.INFO)
     fmt = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s", "%H:%M:%S")
 
-    # Full detail always goes to the log file. The console only needs to
-    # interrupt the clean status UI (see ui_* below) for warnings/errors.
+    # Only warnings/errors interrupt the clean status UI (see ui_* below) —
+    # everything else is narrated by ui_* prints instead of the logger.
     console = logging.StreamHandler(sys.stdout)
     console.setLevel(logging.WARNING)
     console.setFormatter(fmt)
     logger.addHandler(console)
-
-    filehandler = logging.FileHandler(LOG_FILE, encoding="utf-8")
-    filehandler.setFormatter(fmt)
-    logger.addHandler(filehandler)
     return logger
 
 
@@ -111,7 +106,7 @@ def ui_file_failed(err):
     print(style("    x", "red", "bold") + f" failed: {err}")
 
 
-def ui_summary(success, fail, out_dir, log_file):
+def ui_summary(success, fail, out_dir):
     print()
     print(style("-" * 56, "dim"))
     line = f"  {success} succeeded"
@@ -120,7 +115,6 @@ def ui_summary(success, fail, out_dir, log_file):
     else:
         print(style(line, "green", "bold"))
     print(f"  Output: {out_dir}")
-    print(f"  Log:    {log_file}")
     print(style("-" * 56, "dim"))
 
 
@@ -360,9 +354,7 @@ def process_document(input_path: Path, output_path: Path, seed=None, progress_cb
     rng = random.Random(seed)
     doc = docx.Document(str(input_path))
 
-    n_converted = replace_wmf_images_with_png(doc)
-    if n_converted:
-        log.info(f"  Converted {n_converted} WMF image(s) to PNG via Inkscape")
+    replace_wmf_images_with_png(doc)
 
     paragraphs = doc.paragraphs
 
@@ -419,7 +411,6 @@ def process_document(input_path: Path, output_path: Path, seed=None, progress_cb
         })
 
         questions_found += 1
-        log.info(f"  Question {current_question_num}: {len(block_paras)} answers shuffled")
         if progress_cb:
             progress_cb(questions_found)
         current_question_num = None
@@ -487,9 +478,6 @@ def check_dependencies():
 
 def main():
     ui_banner()
-    log.info("=" * 60)
-    log.info("Starting Word file processing in folder")
-    log.info(f"Working directory: {SCRIPT_DIR}")
 
     if not check_dependencies():
         return
@@ -501,10 +489,8 @@ def main():
 
     if not docx_files:
         print(style("No .docx files found in this folder!", "yellow", "bold"))
-        log.warning("No .docx files found in this folder!")
         return
 
-    log.info(f"Found {len(docx_files)} Word file(s) to process")
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     success_count = 0
@@ -512,7 +498,6 @@ def main():
 
     for idx, file_path in enumerate(docx_files, start=1):
         ui_file_start(idx, len(docx_files), file_path.name)
-        log.info(f"[{idx}/{len(docx_files)}] Processing: {file_path.name}")
         try:
             with tempfile.TemporaryDirectory() as tmp_dir:
                 tmp_docx_path = Path(tmp_dir) / f"{file_path.stem}_shuffled.docx"
@@ -521,19 +506,12 @@ def main():
                 pdf_path = convert_to_pdf(tmp_docx_path, OUTPUT_DIR)
 
             ui_file_done(q_count, pdf_path.name)
-            log.info(f"  Success: {q_count} question(s) shuffled -> {pdf_path.name}")
             success_count += 1
         except Exception as e:
             ui_file_failed(e)
-            log.error(f"  Error processing {file_path.name}: {e}")
             fail_count += 1
 
-    ui_summary(success_count, fail_count, OUTPUT_DIR, LOG_FILE)
-    log.info("=" * 60)
-    log.info(f"Summary: {success_count} succeeded, {fail_count} failed")
-    log.info(f"Output files saved in: {OUTPUT_DIR}")
-    log.info(f"Full log saved to: {LOG_FILE}")
-    log.info("=" * 60)
+    ui_summary(success_count, fail_count, OUTPUT_DIR)
 
 
 if __name__ == "__main__":
