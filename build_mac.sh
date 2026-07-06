@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds a single-file macOS executable (dist/shuffle_exam_mac).
+# Builds a single-file macOS executable (dist/docx-answer-scrambler-mac).
 # Run this ON A MAC. It creates a throwaway venv to build with pyinstaller,
 # then deletes it — the resulting binary needs no venv or Python at all.
 # Note: PyInstaller can't cross-compile — a binary built on Apple Silicon
@@ -14,17 +14,17 @@ source build_venv/bin/activate
 pip install --quiet --upgrade pip
 pip install --quiet python-docx Pillow pyinstaller
 
-pyinstaller --onefile --name shuffle_exam_mac --clean shuffle_final.py
+pyinstaller --onefile --name docx-answer-scrambler-mac --clean shuffle_all.py
 
 deactivate
-rm -rf build_venv build shuffle_exam_mac.spec
+rm -rf build_venv build docx-answer-scrambler-mac.spec
 
 echo ""
-echo "Done. Executable: dist/shuffle_exam_mac"
-echo "Copy dist/shuffle_exam_mac next to the .docx files and run it there."
+echo "Done. Executable: dist/docx-answer-scrambler-mac"
+echo "Copy dist/docx-answer-scrambler-mac next to the .docx files and run it there."
 echo "Requires 'inkscape' and 'soffice' (LibreOffice) to be installed on the machine that runs it"
 echo "(brew install --cask inkscape libreoffice)."
 echo ""
 echo "First run may be blocked by Gatekeeper since the binary isn't notarized/signed."
 echo "If macOS refuses to open it: System Settings > Privacy & Security > 'Open Anyway',"
-echo "or run: xattr -d com.apple.quarantine dist/shuffle_exam_mac"
+echo "or run: xattr -d com.apple.quarantine dist/docx-answer-scrambler-mac"
