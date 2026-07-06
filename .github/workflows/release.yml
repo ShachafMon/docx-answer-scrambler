@@ -1,0 +1,27 @@
+name: Handle Manual Release Assets
+
+on:
+  release:
+    types: [published] # Triggers immediately when you click "Publish release"
+
+jobs:
+  upload-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. Run your build process here to generate the binaries
+      # (e.g., go build, npm run build, pyinstaller, etc.)
+      - name: Build Binaries
+        run: |
+          echo "Run your specific build commands here to output the files"
+
+      # 2. Automatically inject the files into the release you just opened
+      - name: Upload Artifacts to the Created Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            docx-answer-scrambler-linux
+            docx-answer-scrambler-mac
+            docx-answer-scrambler.exe
