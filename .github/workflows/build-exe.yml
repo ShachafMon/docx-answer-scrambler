@@ -43,3 +43,10 @@ jobs:
         with:
           name: ${{ matrix.asset_name }}
           path: dist/${{ matrix.asset_name }}
+
+      - name: Upload Linux desktop launcher
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docx-answer-scrambler-linux.desktop
+          path: docx-answer-scrambler-linux.desktop

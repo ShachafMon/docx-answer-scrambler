@@ -12,10 +12,15 @@ pip install --quiet python-docx Pillow pyinstaller
 
 pyinstaller --onefile --name docx-answer-scrambler-linux --clean shuffle_all.py
 
+cp docx-answer-scrambler-linux.desktop dist/
+chmod +x dist/docx-answer-scrambler-linux.desktop
+
 deactivate
 rm -rf build_venv build docx-answer-scrambler-linux.spec
 
 echo ""
 echo "Done. Executable: dist/docx-answer-scrambler-linux"
-echo "Copy dist/docx-answer-scrambler-linux next to the .docx files and run it there."
+echo "Copy both dist/docx-answer-scrambler-linux and dist/docx-answer-scrambler-linux.desktop"
+echo "next to the .docx files and run it there (double-click the .desktop file to get a"
+echo "terminal window with live status)."
 echo "Requires 'inkscape' and 'soffice' (LibreOffice) to be installed on the machine that runs it."

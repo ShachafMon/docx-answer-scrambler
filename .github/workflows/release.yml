@@ -29,5 +29,6 @@ jobs:
             dist/docx-answer-scrambler.exe/docx-answer-scrambler.exe
             dist/docx-answer-scrambler-mac/docx-answer-scrambler-mac
             dist/docx-answer-scrambler-linux/docx-answer-scrambler-linux
+            dist/docx-answer-scrambler-linux.desktop/docx-answer-scrambler-linux.desktop
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

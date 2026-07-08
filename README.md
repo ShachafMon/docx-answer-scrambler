@@ -11,7 +11,7 @@ Grab the latest build for your OS from the [Releases page](https://github.com/Sh
 |---|---|
 | Windows | [docx-answer-scrambler.exe](https://github.com/ShachafMon/docx-answer-scrambler/releases/latest/download/docx-answer-scrambler.exe) |
 | macOS | [docx-answer-scrambler-mac](https://github.com/ShachafMon/docx-answer-scrambler/releases/latest/download/docx-answer-scrambler-mac) |
-| Linux | [docx-answer-scrambler-linux](https://github.com/ShachafMon/docx-answer-scrambler/releases/latest/download/docx-answer-scrambler-linux) |
+| Linux | [docx-answer-scrambler-linux](https://github.com/ShachafMon/docx-answer-scrambler/releases/latest/download/docx-answer-scrambler-linux) + [docx-answer-scrambler-linux.desktop](https://github.com/ShachafMon/docx-answer-scrambler/releases/latest/download/docx-answer-scrambler-linux.desktop) |
 
 No Python or installation needed — just download and run.
 
@@ -50,6 +50,15 @@ Each output PDF has an answer key on its final page.
 macOS note: the app isn't signed/notarized, so Gatekeeper may block the first run.
 If so: System Settings → Privacy & Security → "Open Anyway", or run
 `xattr -d com.apple.quarantine docx-answer-scrambler-mac` in a terminal.
+
+Linux note: double-clicking the raw executable usually won't work — Linux file
+managers don't know how to run console binaries. Instead, download both
+`docx-answer-scrambler-linux` and `docx-answer-scrambler-linux.desktop` into the
+same folder, then double-click the `.desktop` file — it opens a terminal with
+live progress and waits for you to press Enter when done. The first time you
+run it, GNOME Files may ask you to confirm trust — right-click the `.desktop`
+file → Properties → Permissions → "Allow executing file as program", then
+double-click again and choose "Trust and Launch" if prompted.
 
 ## Building from source
 

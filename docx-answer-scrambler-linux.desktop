@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=DOCX Answer Scrambler
+Comment=Shuffle multiple-choice answers in .docx exam files
+Exec=sh -c "cd \"\`dirname \"%k\"\`\" && exec ./docx-answer-scrambler-linux"
+Terminal=true
+Icon=utilities-terminal
+Categories=Utility;
+NoDisplay=true
