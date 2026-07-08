@@ -25,10 +25,12 @@ else:
     SCRIPT_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = SCRIPT_DIR / "shuffled_output"
 
-LETTERS = ["א", "ב", "ג", "ד", "ה","ו","ז"]
-LETTER_PATTERN = re.compile(r'^\s*[\[]?\s*([א-ז])[\.\)]\)?')
-NUM_PATTERN = re.compile(r'^\s*[\[]?\s*([1-5])[\.\)]\)?')
-QUESTION_PATTERN = re.compile(r'^\s*שאלה\s+(\d+)\s*$')
+LETTERS_HE = ["א", "ב", "ג", "ד", "ה", "ו", "ז"]
+LETTERS_EN = ["A", "B", "C", "D", "E", "F", "G"]
+
+HEBREW_LETTER_PATTERN = re.compile(r'^\s*[\[]?\s*([א-ז])[\.\)]\)?')
+ENGLISH_LETTER_PATTERN = re.compile(r'^\s*[\[]?\s*([A-Ga-g])[\.\)]\)?')
+QUESTION_PATTERN = re.compile(r'^\s*(שאלה|Question)\s+(\d+)\s*$', re.IGNORECASE)
 
 INKSCAPE_DPI = 150
 
@@ -123,7 +125,12 @@ def get_para_text(p):
 
 
 def label_match(text):
-    return LETTER_PATTERN.match(text) or NUM_PATTERN.match(text)
+    return HEBREW_LETTER_PATTERN.match(text) or ENGLISH_LETTER_PATTERN.match(text)
+
+
+def label_letters(text):
+    """Which letter set a matched label belongs to, for re-labeling after shuffle."""
+    return LETTERS_EN if ENGLISH_LETTER_PATTERN.match(text) else LETTERS_HE
 
 
 def strip_label(text):
@@ -232,11 +239,12 @@ def shuffle_block_text(block_paras, rng):
     indices = list(range(len(original_bodies)))
     rng.shuffle(indices)
     shuffled_bodies = [original_bodies[idx] for idx in indices]
+    letters = label_letters(get_para_text(block_paras[0]))
 
     for j, p in enumerate(block_paras):
         orig_text = get_para_text(p)
-        if LETTER_PATTERN.match(orig_text):
-            label = LETTERS[j] if j < len(LETTERS) else str(j + 1)
+        if label_match(orig_text):
+            label = letters[j] if j < len(letters) else str(j + 1)
             new_full_text = f"{label}. {shuffled_bodies[j]}"
         else:
             new_full_text = f"{j + 1}. {shuffled_bodies[j]}"
@@ -321,24 +329,31 @@ def set_rtl(paragraph):
     pPr = paragraph._p.get_or_add_pPr()
     pPr.append(OxmlElement('w:bidi'))
 
-def add_answer_key_page(doc, answer_key):
+def add_answer_key_page(doc, answer_key, lang="he"):
+    is_rtl = lang != "en"
+    title = "מפתח תשובות" if is_rtl else "Answer Key"
+    col_headers = ("שאלה", "תשובה נכונה") if is_rtl else ("Question", "Correct Answer")
+
     doc.add_page_break()
 
     heading = doc.add_paragraph()
-    set_rtl(heading)
-    heading_run = heading.add_run("מפתח תשובות")
+    if is_rtl:
+        set_rtl(heading)
+    heading_run = heading.add_run(title)
     heading_run.bold = True
     heading_run.font.size = Pt(16)
 
     table = doc.add_table(rows=1, cols=2)
     table.style = "Table Grid"
-    table._tbl.tblPr.append(OxmlElement('w:bidiVisual'))
+    if is_rtl:
+        table._tbl.tblPr.append(OxmlElement('w:bidiVisual'))
     header_cells = table.rows[0].cells
-    header_cells[0].text = "שאלה"
-    header_cells[1].text = "תשובה נכונה"
+    header_cells[0].text = col_headers[0]
+    header_cells[1].text = col_headers[1]
     for cell in header_cells:
         for p in cell.paragraphs:
-            set_rtl(p)
+            if is_rtl:
+                set_rtl(p)
             for run in p.runs:
                 run.bold = True
 
@@ -348,7 +363,18 @@ def add_answer_key_page(doc, answer_key):
         row_cells[1].text = entry["correct_letter"]
         for cell in row_cells:
             for p in cell.paragraphs:
-                set_rtl(p)
+                if is_rtl:
+                    set_rtl(p)
+
+def keep_block_together(paragraphs, start_i, end_i):
+    """Mark paragraphs[start_i:end_i] so Word/LibreOffice never breaks a page
+    in the middle of them (question stem + its answer options)."""
+    for idx in range(start_i, end_i):
+        pf = paragraphs[idx].paragraph_format
+        pf.keep_together = True
+        if idx < end_i - 1:
+            pf.keep_with_next = True
+
 
 def process_document(input_path: Path, output_path: Path, seed=None, progress_cb=None):
     rng = random.Random(seed)
@@ -360,6 +386,8 @@ def process_document(input_path: Path, output_path: Path, seed=None, progress_cb
 
     answer_key = []
     current_question_num = None
+    question_start_i = None
+    doc_lang = None
     i = 0
     questions_found = 0
 
@@ -370,7 +398,10 @@ def process_document(input_path: Path, output_path: Path, seed=None, progress_cb
         if q_match:
             if current_question_num:
                 log.warning(f"  Question {current_question_num}: no answers detected to shuffle, skipped")
-            current_question_num = q_match.group(1)
+            current_question_num = q_match.group(2)
+            question_start_i = i
+            if doc_lang is None:
+                doc_lang = "en" if q_match.group(1).lower().startswith("q") else "he"
             i += 1
             continue
 
@@ -404,11 +435,18 @@ def process_document(input_path: Path, output_path: Path, seed=None, progress_cb
         else:
             indices = shuffle_block_nodes(block_paras, [None] * len(block_paras), rng)
 
+        if is_label_style:
+            key_letters = label_letters(get_para_text(block_paras[0]))
+        else:
+            key_letters = LETTERS_EN if doc_lang == "en" else LETTERS_HE
+
         new_correct_pos = indices.index(0)
         answer_key.append({
             "question": current_question_num,
-            "correct_letter": LETTERS[new_correct_pos] if new_correct_pos < len(LETTERS) else str(new_correct_pos + 1)
+            "correct_letter": key_letters[new_correct_pos] if new_correct_pos < len(key_letters) else str(new_correct_pos + 1)
         })
+
+        keep_block_together(paragraphs, question_start_i, end_i)
 
         questions_found += 1
         if progress_cb:
@@ -418,7 +456,7 @@ def process_document(input_path: Path, output_path: Path, seed=None, progress_cb
     if current_question_num:
         log.warning(f"  Question {current_question_num}: no answers detected to shuffle, skipped")
 
-    add_answer_key_page(doc, answer_key)
+    add_answer_key_page(doc, answer_key, lang=doc_lang or "he")
 
     doc.save(str(output_path))
 
